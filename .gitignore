@@ -1,12 +1,37 @@
+# ---------- Python ----------
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
-.env
+*.log
 *.db
 *.sqlite3
-uploads/
-data/
-venv/
-*.log
 *.DS_Store
+venv/
+.env
+.env.*
+*.env
+
+# ---------- App runtime data ----------
+app/uploads/
+app/miluimData/*
+!app/miluimData/.gitkeep
+
+*.pdf
+
+# ---------- Docker ----------
+.docker.env
+
+# ---------- Terraform / OpenTofu ----------
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+!terraform/.terraform.lock.hcl
+
+# ---------- SSH / מפתחות / סודות ----------
+*.pem
+*.key
+id_rsa
+id_ecdsa
+id_ed25519
+.aws/

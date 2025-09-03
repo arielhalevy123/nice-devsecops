@@ -1,0 +1,6 @@
+flask
+pdfplumber
+pytesseract
+pdf2image
+pillow
+numpy
