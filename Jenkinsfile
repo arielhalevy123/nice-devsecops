@@ -23,7 +23,10 @@ pipeline {
           secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
 
           sh """
-            set -e
+            set -
+              if ! command -v tofu >/dev/null 2>&1; then
+              curl -L https://get.opentofu.org/install.sh | bash
+            fi
             cd infra
             tofu init -upgrade
             tofu plan -var-file=dev.tfvars -out=tfplan
