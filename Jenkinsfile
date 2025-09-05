@@ -55,48 +55,42 @@ pipeline {
         stage('Build & Trivy on App Server') {
             steps {
                 sshagent (credentials: [env.SSH_CRED_ID]) {
-                withCredentials([aws(credentialsId: env.AWS_CRED_ID,
-                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    withCredentials([aws(credentialsId: env.AWS_CRED_ID,
+                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
 
-                    sh """
-                    set -e
-                    ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} 'bash -s' <<'EOSH'
-                set -e
+                        sh """
+                            set -e
+                            ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} 'bash -s' << 'EOSH'
+                            set -e
 
-                # 1) קוד אפליקציה
-                if [ -d ~/nice-devsecops ]; then
-                cd ~/nice-devsecops && git pull origin main
-                else
-                git clone ${env.REPO_URL} ~/nice-devsecops
-                fi
-                cd ~/nice-devsecops/app
+                            if [ -d ~/nice-devsecops ]; then
+                            cd ~/nice-devsecops && git pull origin main
+                            else
+                            git clone ${env.REPO_URL} ~/nice-devsecops
+                            fi
+                            cd ~/nice-devsecops/app
 
-                # 2) לנקות קונטיינר ישן
-                docker stop miluim-grant || true
-                docker rm   miluim-grant || true
+                            docker stop miluim-grant || true
+                            docker rm   miluim-grant || true
 
-                # 3) לבנות אימג'
-                docker build -t ${env.IMAGE_NAME} .
+                            docker build -t ${env.IMAGE_NAME} .
 
-                # 4) סריקה עם Trivy -> לקובץ
-                docker run --rm \
-                -v /var/run/docker.sock:/var/run/docker.sock \
-                -v \$(pwd):/work aquasec/trivy:0.53.0 \
-                image --format json --output /work/trivy-report.json \
-                --severity HIGH,CRITICAL --exit-code 0 ${env.IMAGE_NAME}
+                            docker run --rm \\
+                            -v /var/run/docker.sock:/var/run/docker.sock \\
+                            -v \$(pwd):/work aquasec/trivy:0.53.0 \\
+                            image --format json --output /work/trivy-report.json \\
+                            --severity HIGH,CRITICAL --exit-code 0 ${env.IMAGE_NAME}
 
-                # 5) העלאת הדוח ל-S3 דרך קונטיינר aws-cli (בלי sudo ובלי התקנה)
-                docker run --rm -v \$(pwd):/work \
-                -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-                -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-                -e AWS_DEFAULT_REGION=${env.AWS_REGION} \
-                amazon/aws-cli s3 cp /work/trivy-report.json s3://${env.BUCKET}/reports/trivy-\$(date +%s).json --region ${env.AWS_REGION}
+                            docker run --rm -v \$(pwd):/work \\
+                            -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \\
+                            -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \\
+                            -e AWS_DEFAULT_REGION=${env.AWS_REGION} \\
+                            amazon/aws-cli s3 cp /work/trivy-report.json s3://${env.BUCKET}/reports/trivy-\$(date +%s).json --region ${env.AWS_REGION}
 
-                # 6) להרים את האפליקציה על 80 -> 5000
-                docker run -d --name miluim-grant -p 80:5000 --restart=always \
-                -v ~/nice-devsecops/app/miluimData:/app/data ${env.IMAGE_NAME}
-                EOSH
+                            docker run -d --name miluim-grant -p 80:5000 --restart=always \\
+                            -v ~/nice-devsecops/app/miluimData:/app/data ${env.IMAGE_NAME}
+                            EOSH
                         """
                     }
                 }
