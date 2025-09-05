@@ -53,49 +53,50 @@ pipeline {
         }
 
         stage('Build & Trivy on App Server') {
-            steps {
-                sshagent (credentials: [env.SSH_CRED_ID]) {
-                    withCredentials([aws(credentialsId: env.AWS_CRED_ID,
-                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+  steps {
+    sshagent (credentials: [env.SSH_CRED_ID]) {
+      withCredentials([aws(credentialsId: env.AWS_CRED_ID,
+        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
 
-                        sh """
-                            set -e
-                            ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} 'bash -s' << 'EOSH'
-                            set -e
+        sh '''
+set -e
+ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} \
+"AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} AWS_DEFAULT_REGION=${AWS_REGION} bash -s" <<'EOSH'
+set -e
 
-                            if [ -d ~/nice-devsecops ]; then
-                            cd ~/nice-devsecops && git pull origin main
-                            else
-                            git clone ${env.REPO_URL} ~/nice-devsecops
-                            fi
-                            cd ~/nice-devsecops/app
+if [ -d ~/nice-devsecops ]; then
+  cd ~/nice-devsecops && git pull origin main
+else
+  git clone ${REPO_URL} ~/nice-devsecops
+fi
+cd ~/nice-devsecops/app
 
-                            docker stop miluim-grant || true
-                            docker rm   miluim-grant || true
+docker stop miluim-grant || true
+docker rm   miluim-grant || true
 
-                            docker build -t ${env.IMAGE_NAME} .
+docker build -t ${IMAGE_NAME} .
 
-                            docker run --rm \\
-                            -v /var/run/docker.sock:/var/run/docker.sock \\
-                            -v \$(pwd):/work aquasec/trivy:0.53.0 \\
-                            image --format json --output /work/trivy-report.json \\
-                            --severity HIGH,CRITICAL --exit-code 0 ${env.IMAGE_NAME}
+docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $(pwd):/work aquasec/trivy:0.53.0 \
+  image --format json --output /work/trivy-report.json \
+  --severity HIGH,CRITICAL --exit-code 0 ${IMAGE_NAME}
 
-                            docker run --rm -v \$(pwd):/work \\
-                            -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \\
-                            -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \\
-                            -e AWS_DEFAULT_REGION=${env.AWS_REGION} \\
-                            amazon/aws-cli s3 cp /work/trivy-report.json s3://${env.BUCKET}/reports/trivy-\$(date +%s).json --region ${env.AWS_REGION}
+docker run --rm -v $(pwd):/work \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_DEFAULT_REGION \
+  amazon/aws-cli s3 cp /work/trivy-report.json s3://${BUCKET}/reports/trivy-$(date +%s).json --region ${AWS_REGION}
 
-                            docker run -d --name miluim-grant -p 80:5000 --restart=always \\
-                            -v ~/nice-devsecops/app/miluimData:/app/data ${env.IMAGE_NAME}
-                            EOSH
-                        """
-                    }
-                }
-            }
-        }
+docker run -d --name miluim-grant -p 80:5000 --restart=always \
+  -v ~/nice-devsecops/app/miluimData:/app/data ${IMAGE_NAME}
+EOSH
+        '''
+      }
+    }
+  }
+}
         stage('Upload Report to S3 (from Jenkins)') {
         steps {
             withCredentials([aws(credentialsId: env.AWS_CRED_ID,
