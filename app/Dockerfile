@@ -4,7 +4,7 @@ FROM python:3.11-slim AS builder
 ARG DEBIAN_FRONTEND=noninteractive
 WORKDIR /w
 
-# כלי build ותלויות לפיתוח (לכילוף בזמן ריצה לא נצטרך את זה)
+# כלי build ותלויות לפיתוח
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl ca-certificates \
     build-essential autoconf automake libtool pkg-config cmake \
@@ -12,16 +12,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 # --- Leptonica (בלי openjpeg) ---
-# גרסה יציבה (אפשר לשנות אם תרצה)
 ENV LEPT_VER=1.84.1
 RUN curl -L -o leptonica.tar.gz https://github.com/DanBloomberg/leptonica/archive/refs/tags/$LEPT_VER.tar.gz \
  && tar -xzf leptonica.tar.gz && rm leptonica.tar.gz \
  && cd leptonica-$LEPT_VER \
- && ./autobuild && ./configure --prefix=/usr/local --without-openjpeg \
+ # בטארבול יציב יש configure מוכן, אין autobuild:
+ && ./configure --prefix=/usr/local --without-openjpeg \
  && make -j"$(nproc)" && make install
 
 # --- Tesseract ---
-# תלוי רק ב-leptonica; אין תלות ב-openjpeg
 ENV TESSERACT_VER=5.4.0
 RUN curl -L -o tesseract.tar.gz https://github.com/tesseract-ocr/tesseract/archive/refs/tags/$TESSERACT_VER.tar.gz \
  && tar -xzf tesseract.tar.gz && rm tesseract.tar.gz \
@@ -30,7 +29,7 @@ RUN curl -L -o tesseract.tar.gz https://github.com/tesseract-ocr/tesseract/archi
  && PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ./configure --prefix=/usr/local \
  && make -j"$(nproc)" && make install && ldconfig
 
-# קבצי שפה (fast = מהיר; אפשר להחליף ל-best)
+# קבצי שפה (fast). אפשר להחליף ל-best אם תרצה דיוק גבוה יותר על חשבון זמן.
 RUN mkdir -p /usr/local/share/tessdata \
  && curl -L -o /usr/local/share/tessdata/eng.traineddata https://github.com/tesseract-ocr/tessdata_fast/raw/main/eng.traineddata \
  && curl -L -o /usr/local/share/tessdata/heb.traineddata https://github.com/tesseract-ocr/tessdata_fast/raw/main/heb.traineddata \
@@ -48,12 +47,12 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV LD_LIBRARY_PATH=/usr/local/lib
 WORKDIR /app
 
-# תלויות דינמיות קלות לתמונות – בלי openjpeg
+# ספריות ריצה קלות – בלי openjpeg
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libjpeg62-turbo zlib1g libtiff6 libpng16-16 libwebp7 \
  && rm -rf /var/lib/apt/lists/*
 
-# מעתיקים את tesseract+leptonica שנבנו
+# מעתיקים את Tesseract/Leptonica שנבנו
 COPY --from=builder /usr/local /usr/local
 
 # אפליקציה + wheels
