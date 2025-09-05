@@ -9,7 +9,7 @@ pipeline {
     REMOTE_USER = 'ubuntu'
 
     // שמות הקרדנצ׳יאלס כפי שמוגדרים ב-Jenkins
-    SSH_CRED_ID = 'ubuntu'                 // עדכן אם אצלך שונה
+    SSH_CRED_ID = 'ssh-ec2-app'
     AWS_CRED_ID = 'aws-jenkins-devsecops'  // access key + secret key
 
     IMAGE_NAME  = 'miluim-grant:latest'
