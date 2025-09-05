@@ -1,7 +1,7 @@
 flask
 pdfplumber
 pytesseract
-pdf2image
 pillow
 numpy
+pypdfium2>=4.30.0
 setuptools>=78.1.1

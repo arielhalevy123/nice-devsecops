@@ -13,16 +13,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # --- Leptonica (CMake; ללא OpenJPEG) ---
 ENV LEPT_VER=1.84.1
+ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 RUN curl -L -o leptonica.tar.gz https://github.com/DanBloomberg/leptonica/archive/refs/tags/${LEPT_VER}.tar.gz \
  && tar -xzf leptonica.tar.gz && rm leptonica.tar.gz \
  && cmake -S leptonica-${LEPT_VER} -B leptonica-build \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=/usr/local \
+      -DBUILD_SHARED_LIBS=ON \
       -DOPENJPEG_SUPPORT=OFF \
       -DSW_BUILD=OFF \
  && cmake --build leptonica-build -j"$(nproc)" \
- && cmake --install leptonica-build
-
+ && cmake --install leptonica-build \
+ && ldconfig \
+ # tesseract מחפש lept.pc – נוסיף קישור סימבולי
+ && ln -sf /usr/local/lib/pkgconfig/lept_Release.pc /usr/local/lib/pkgconfig/lept.pc
 # --- Tesseract (מהמקור) ---
 ENV TESSERACT_VER=5.4.0
 RUN curl -L -o tesseract.tar.gz https://github.com/tesseract-ocr/tesseract/archive/refs/tags/${TESSERACT_VER}.tar.gz \
