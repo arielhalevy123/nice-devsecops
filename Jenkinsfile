@@ -9,8 +9,12 @@ pipeline {
     REPO_URL    = 'https://github.com/arielhalevy123/nice-devsecops.git'
     REMOTE_HOST = '34.207.115.202'
     REMOTE_USER = 'ubuntu'
-    SSH_CRED_ID = 'ssh-ec2-app'  
+    SSH_CRED_ID = 'ssh-ec2-app'
     IMAGE_NAME  = 'miluim-grant:latest'
+
+    AWS_CRED_ID = 'aws-jenkins-devsecops'     // <- קרדנצ׳יאלז של AWS ב-Jenkins
+    BUCKET      = 'devsecops-scan-reports-ariel'
+    AWS_REGION  = 'us-east-1'
   }
 
   stages {
@@ -58,12 +62,35 @@ pipeline {
               set -e &&
               cd ~/nice-devsecops/app &&
               docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \\
-                -v \$(pwd):/work aquasec/trivy:0.53.0 \\
+                -v \\$(pwd):/work aquasec/trivy:0.53.0 \\
                 image --format json --output /work/trivy-report.json \\
                 --severity HIGH,CRITICAL --exit-code 0 ${IMAGE_NAME} &&
               ls -l trivy-report.json
             "
           """
+        }
+      }
+    }
+
+    stage('Upload Trivy Report to S3') {
+      steps {
+        sshagent (credentials: [env.SSH_CRED_ID]) {
+          withCredentials([aws(credentialsId: env.AWS_CRED_ID,
+                               accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                               secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+            sh """
+              set -e
+              ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "
+                set -e &&
+                cd ~/nice-devsecops/app &&
+                AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \\
+                AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \\
+                AWS_DEFAULT_REGION=${AWS_REGION} \\
+                docker run --rm -v \\$(pwd):/work amazon/aws-cli \\
+                  s3 cp /work/trivy-report.json s3://${BUCKET}/reports/trivy-\\\$(date +%s).json --region ${AWS_REGION}
+              "
+            """
+          }
         }
       }
     }
