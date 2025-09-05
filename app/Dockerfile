@@ -1,20 +1,18 @@
-# ---------- builder: מתקין כלים לבנייה בלבד ----------
+# ---------- builder: כלים לבנייה בלבד ----------
 FROM python:3.11-slim AS builder
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
  && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-COPY app/requirements.txt /app/requirements.txt
-
-# נעלה גרסאות pip/setuptools כדי לסגור את ה-HIGH של setuptools
+WORKDIR /w
+# הקובץ נמצא ישירות בתוך app/, אז במסלול היחסי זה רק requirements.txt
+COPY requirements.txt .
+# סוגר פגיעויות של setuptools ומכין wheels
 RUN python -m pip install --upgrade pip setuptools wheel \
- && pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+ && pip wheel --no-cache-dir -r requirements.txt -w /wheels
 
-# ---------- runtime: רק מה שנחוץ להרצה ----------
+# ---------- runtime: רק מה שנדרש להרצה ----------
 FROM python:3.11-slim
-
-# ספריות ריצה (לא חבילות dev)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     poppler-utils \
@@ -28,9 +26,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY app /app
-
-# מתקינים מתוך ה-wheels שנבנו בבילדר, בלי להשאיר קומפיילרים
+# כל קבצי האפליקציה (מתוך app/) נכנסים
+COPY . /app
+# מתקינים מה-wheels שנבנו בבילדר
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache-dir /wheels/*
 
