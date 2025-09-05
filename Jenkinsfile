@@ -48,5 +48,24 @@ pipeline {
         }
       }
     }
+
+    stage('Trivy Scan (App Server)') {
+      steps {
+        sshagent (credentials: [env.SSH_CRED_ID]) {
+          sh """
+            set -e
+            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "
+              set -e &&
+              cd ~/nice-devsecops/app &&
+              docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \\
+                -v \$(pwd):/work aquasec/trivy:0.53.0 \\
+                image --format json --output /work/trivy-report.json \\
+                --severity HIGH,CRITICAL --exit-code 0 ${IMAGE_NAME} &&
+              ls -l trivy-report.json
+            "
+          """
+        }
+      }
+    }
   }
 }
