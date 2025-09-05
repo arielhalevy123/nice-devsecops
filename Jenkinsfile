@@ -44,7 +44,7 @@ pipeline {
               docker rm   miluim-grant || true &&
               docker build -t $IMAGE_NAME . &&
               docker run -d --name miluim-grant -p 80:5000 --restart=always \\
-                -v ~/nice-devsecops/app/miluimData:/app/data $IMAGE_NAME
+                -v ~/nice-devsecops/app/Data:/app/data $IMAGE_NAME
             "
           '''
         }
