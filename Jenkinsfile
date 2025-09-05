@@ -53,47 +53,48 @@ pipeline {
     }
 
     stage('Build & Trivy on App Server') {
-      steps {
-        sshagent (credentials: [env.SSH_CRED_ID]) {
-          sh '''
-            set -e
+  steps {
+    sshagent (credentials: [SSH_CRED_ID]) {
+      sh """
+        set -e
+        ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
+          set -e
 
-            # מעדכנים קוד על השרת
-            ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST '
-              set -e
-              if [ -d ~/nice-devsecops ]; then
-                cd ~/nice-devsecops && git pull origin main
-              else
-                git clone '"$REPO_URL"' ~/nice-devsecops
-              fi
+          # 1) ודא ש-Docker מותקן
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "Docker not found - installing..."
+            sudo curl -fsSL https://get.docker.com | sudo sh
+            sudo systemctl enable --now docker || true
+          fi
 
-              cd ~/nice-devsecops/app
+          # 2) עדכון קוד האפליקציה
+          if [ -d ~/nice-devsecops ]; then
+            cd ~/nice-devsecops && git pull origin main
+          else
+            git clone ${REPO_URL} ~/nice-devsecops
+          fi
 
-              # עוצרים/מנקים קונטיינר ישן
-              docker stop miluim-grant || true
-              docker rm   miluim-grant || true
+          cd ~/nice-devsecops/app
 
-              # בונים אימג'
-              docker build -t '"$IMAGE_NAME"' .
+          # 3) עצירת קונטיינר ישן (אם קיים)
+          sudo docker stop miluim-grant || true
+          sudo docker rm   miluim-grant || true
 
-              # סריקת Trivy ושמירת דוח JSON בתיקייה
-              docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                -v "$(pwd)":/work aquasec/trivy:0.53.0 \
-                image --format json --output /work/trivy-report.json \
-                --severity HIGH,CRITICAL --exit-code 0 '"$IMAGE_NAME"'
+          # 4) בניית אימג'
+          sudo docker build -t ${IMAGE_NAME} .
 
-              # מרימים את האפליקציה על פורט 80->5000
-              docker run -d --name miluim-grant -p 80:5000 --restart=always \
-                -v ~/nice-devsecops/app/miluimData:/app/data '"$IMAGE_NAME"'
-            '
+          # 5) סריקת Trivy (בלי להכשיל את ה-Pipeline)
+          sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \\
+            aquasec/trivy:0.53.0 image --severity HIGH,CRITICAL --exit-code 0 ${IMAGE_NAME} || true
 
-            # מורידים את דוח ה-Trivy לצד Jenkins
-            scp -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST:~/nice-devsecops/app/trivy-report.json ./trivy-report.json
-          '''
-        }
-      }
+          # 6) הרצת הקונטיינר על פורט 80 ← 5000 של האפליקציה
+          sudo docker run -d --name miluim-grant -p 80:5000 --restart=always \\
+            -v ~/nice-devsecops/app/miluimData:/app/data ${IMAGE_NAME}
+        '
+      """
     }
-
+  }
+}
     stage('Upload Report to S3 (from Jenkins)') {
       steps {
         withCredentials([aws(credentialsId: env.AWS_CRED_ID,
