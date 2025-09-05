@@ -6,9 +6,10 @@ pipeline {
   }
 
   environment {
-    REPO_URL   = 'https://github.com/arielhalevy123/nice-devsecops.git'
+    REPO_URL    = 'https://github.com/arielhalevy123/nice-devsecops.git'
     REMOTE_HOST = '34.207.115.202'
     REMOTE_USER = 'ubuntu'
+    SSH_CRED_ID = 'ssh-ec2-app'  
     IMAGE_NAME  = 'miluim-grant:latest'
   }
 
@@ -26,7 +27,7 @@ pipeline {
 
     stage('Build & Run on App Server') {
       steps {
-        sshagent (credentials: ['ubuntu']) {
+        sshagent (credentials: [env.SSH_CRED_ID]) {
           sh """
             set -e
             ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "
