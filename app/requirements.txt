@@ -4,3 +4,4 @@ pytesseract
 pdf2image
 pillow
 numpy
+setuptools>=78.1.1
