@@ -1,9 +1,7 @@
 pipeline {
   agent any
 
-  triggers {
-    githubPush()
-  }
+  triggers { githubPush() }
 
   environment {
     REPO_URL    = 'https://github.com/arielhalevy123/nice-devsecops.git'
@@ -12,7 +10,7 @@ pipeline {
     SSH_CRED_ID = 'ssh-ec2-app'
     IMAGE_NAME  = 'miluim-grant:latest'
 
-    AWS_CRED_ID = 'aws-jenkins-devsecops'     // <- קרדנצ׳יאלז של AWS ב-Jenkins
+    AWS_CRED_ID = 'aws-jenkins-devsecops'
     BUCKET      = 'devsecops-scan-reports-ariel'
     AWS_REGION  = 'us-east-1'
   }
@@ -32,23 +30,23 @@ pipeline {
     stage('Build & Run on App Server') {
       steps {
         sshagent (credentials: [env.SSH_CRED_ID]) {
-          sh """
+          sh '''
             set -e
-            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "
+            ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
               set -e &&
               if [ -d ~/nice-devsecops ]; then
                 cd ~/nice-devsecops && git pull origin main
               else
-                git clone ${REPO_URL} ~/nice-devsecops
+                git clone $REPO_URL ~/nice-devsecops
               fi &&
               cd ~/nice-devsecops/app &&
               docker stop miluim-grant || true &&
               docker rm   miluim-grant || true &&
-              docker build -t ${IMAGE_NAME} . &&
+              docker build -t $IMAGE_NAME . &&
               docker run -d --name miluim-grant -p 80:5000 --restart=always \\
-                -v ~/nice-devsecops/app/miluimData:/app/data ${IMAGE_NAME}
+                -v ~/nice-devsecops/app/miluimData:/app/data $IMAGE_NAME
             "
-          """
+          '''
         }
       }
     }
@@ -56,18 +54,18 @@ pipeline {
     stage('Trivy Scan (App Server)') {
       steps {
         sshagent (credentials: [env.SSH_CRED_ID]) {
-          sh """
+          sh '''
             set -e
-            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "
+            ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
               set -e &&
               cd ~/nice-devsecops/app &&
               docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \\
-                -v \\$(pwd):/work aquasec/trivy:0.53.0 \\
+                -v \$(pwd):/work aquasec/trivy:0.53.0 \\
                 image --format json --output /work/trivy-report.json \\
-                --severity HIGH,CRITICAL --exit-code 0 ${IMAGE_NAME} &&
+                --severity HIGH,CRITICAL --exit-code 0 $IMAGE_NAME &&
               ls -l trivy-report.json
             "
-          """
+          '''
         }
       }
     }
@@ -78,18 +76,18 @@ pipeline {
           withCredentials([aws(credentialsId: env.AWS_CRED_ID,
                                accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                                secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-            sh """
+            sh '''
               set -e
-              ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "
+              ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
                 set -e &&
                 cd ~/nice-devsecops/app &&
-                AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \\
-                AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \\
-                AWS_DEFAULT_REGION=${AWS_REGION} \\
-                docker run --rm -v \\$(pwd):/work amazon/aws-cli \\
-                  s3 cp /work/trivy-report.json s3://${BUCKET}/reports/trivy-\\\$(date +%s).json --region ${AWS_REGION}
+                AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \\
+                AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \\
+                AWS_DEFAULT_REGION=$AWS_REGION \\
+                docker run --rm -v \$(pwd):/work amazon/aws-cli \\
+                  s3 cp /work/trivy-report.json s3://$BUCKET/reports/trivy-\$(date +%s).json --region $AWS_REGION
               "
-            """
+            '''
           }
         }
       }
