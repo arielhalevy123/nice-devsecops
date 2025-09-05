@@ -71,26 +71,27 @@ pipeline {
     }
 
     stage('Upload Trivy Report to S3') {
-      steps {
-        sshagent (credentials: [env.SSH_CRED_ID]) {
-          withCredentials([aws(credentialsId: env.AWS_CRED_ID,
-                               accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                               secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-            sh '''
-              set -e
-              ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
-                set -e &&
-                cd ~/nice-devsecops/app &&
-                AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \\
-                AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \\
-                AWS_DEFAULT_REGION=$AWS_REGION \\
-                docker run --rm -v \$(pwd):/work amazon/aws-cli \\
-                  s3 cp /work/trivy-report.json s3://$BUCKET/reports/trivy-\$(date +%s).json --region $AWS_REGION
-              "
-            '''
-          }
+        steps {
+            sshagent (credentials: [env.SSH_CRED_ID]) {
+            withCredentials([aws(credentialsId: env.AWS_CRED_ID,
+                                accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                                secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                sh '''
+                set -e
+                ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
+                    set -e &&
+                    cd ~/nice-devsecops/app &&
+                    docker run --rm -v \$(pwd):/work \\
+                    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \\
+                    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \\
+                    -e AWS_DEFAULT_REGION=$AWS_REGION \\
+                    amazon/aws-cli \\
+                    s3 cp /work/trivy-report.json s3://$BUCKET/reports/trivy-\$(date +%s).json --region $AWS_REGION
+                "
+                '''
+            }
+            }
         }
-      }
     }
   }
 }
