@@ -5,7 +5,7 @@ import uuid
 import urllib.parse
 import json
 from werkzeug.utils import secure_filename
-from pdf2image import convert_from_path
+import pypdfium2 as pdfium
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_from_directory
 
@@ -61,11 +61,21 @@ def clean_date_string(date_str):
         print(f"שגיאה בתיקון תאריך: {date_str} | {e}")
         return None
 
+def pdf_pages_to_pil_images(pdf_path, scale=2):
+    """
+    רינדור עמודי PDF לתמונות PIL באמצעות pypdfium2 (ללא poppler/openjpeg).
+    scale≈DPI/100, כלומר scale=2 ~ 200DPI.
+    """
+    pdf = pdfium.PdfDocument(pdf_path)
+    for i in range(len(pdf)):
+        page = pdf[i]
+        pil_image = page.render(scale=scale).to_pil()
+        yield pil_image
+
 def extract_service_dates_from_pdf(path):
     text = ""
-    images = convert_from_path(path, dpi=150)
-
-    for img in images:
+    # המרה לעמודים כ־תמונות עם pypdfium2 במקום pdf2image
+    for img in pdf_pages_to_pil_images(path, scale=2):
         text += pytesseract.image_to_string(img, lang='heb+eng') + "\n"
 
     print("📄 טקסט שחולץ:\n", text)
@@ -90,7 +100,6 @@ def extract_service_dates_from_pdf(path):
 
     print("📆 תאריכים לאחר עיבוד:", dates)
 
-
     if len(dates) % 2 != 0:
         print(f"⚠️ מספר תאריכים אי זוגי ({len(dates)}), מתעלם מהראשון: {dates[0]}")
         dates = dates[1:]
@@ -104,6 +113,7 @@ def extract_service_dates_from_pdf(path):
 
 def build_miluimnik_link(date_ranges, service_before, user_flags):
     formatted_ranges = []
+    # שומר על הלוגיקה המקורית (גם אם הסדר נראה הפוך בקוד המקורי)
     for end, start in date_ranges:
         formatted_ranges.append({
             "startDate": start,
@@ -154,7 +164,7 @@ def generate_link():
         return jsonify({'error': 'הקובץ מכיל תאריכים לפני 07/10/2023. יש להעלות טופס 3010 עדכני.'}), 400
     
     if service_dates == "TOO_EARLY":
-            return jsonify({'error': 'הקובץ מכיל תאריכים מוקדמים מ-07/10/2023. יש להעלות טופס 3010 עדכני עם שירות לאחר תאריך זה.'}), 400
+        return jsonify({'error': 'הקובץ מכיל תאריכים מוקדמים מ-07/10/2023. יש להעלות טופס 3010 עדכני עם שירות לאחר תאריך זה.'}), 400
    
     if not service_dates:
         return jsonify({'error': 'לא נמצאו תאריכי שירות בקובץ'}), 400
