@@ -88,7 +88,7 @@ def extract_service_dates_from_pdf(path):
 
     dates = []
     for i, d in enumerate(raw_dates):
-        if i < 3:  # דילוג על 4 התאריכים הראשונים
+        if i < 2:  # דילוג על 4 התאריכים הראשונים
             continue
         fixed = clean_date_string(d)
         if fixed == "TOO_EARLY":
