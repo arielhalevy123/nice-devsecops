@@ -14,19 +14,19 @@ venv/
 
 # ---------- App runtime data ----------
 app/uploads/
-app/miluimData/*
-!app/miluimData/.gitkeep
-
+app/Data/*
+!app/Data/.gitkeep
+app/Data/counter.txt
 *.pdf
 
 # ---------- Docker ----------
 .docker.env
 
 # ---------- Terraform / OpenTofu ----------
-terraform/.terraform/
-terraform/*.tfstate
-terraform/*.tfstate.backup
-!terraform/.terraform.lock.hcl
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+!infra/.terraform.lock.hcl
 
 # ---------- SSH / מפתחות / סודות ----------
 *.pem
