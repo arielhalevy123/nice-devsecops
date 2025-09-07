@@ -1,3 +1,11 @@
+terraform {
+  backend "s3" {
+    bucket = "devsecops-scan-reports-ariel"
+    key    = "tofu/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+
 provider "aws" {
   region = var.region
 }
