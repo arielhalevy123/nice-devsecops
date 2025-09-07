@@ -198,7 +198,9 @@ def add_csp_header(response):
         "object-src 'none'; "
         "base-uri 'self'; "
         "form-action 'self'; "
-        "frame-ancestors 'none';"
+        "frame-ancestors 'none'; "
+        "media-src 'self'; "
+        "manifest-src 'self';"
     )
     response.headers['X-Frame-Options'] = 'DENY'
     return response
