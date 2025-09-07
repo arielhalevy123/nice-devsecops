@@ -26,16 +26,18 @@ pipeline {
         '''
       }
     }
-       stage('Clean Docker') {
-      steps {
-        sh """
+  stage('Clean Docker') {
+  steps {
+    sshagent (credentials: [env.SSH_CRED_ID]) {
+      sh """
         ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST '
           echo "🧹 Cleaning up unused Docker resources..."
           docker system prune -f --volumes
         '
-        """
-      }
+      """
     }
+  }
+}
 
 stage('OpenTofu Apply (on App Server via Docker)') {
   steps {
