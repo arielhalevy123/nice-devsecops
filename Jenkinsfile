@@ -26,21 +26,21 @@ pipeline {
         '''
       }
     }
-        stage('Terraform Apply') {
-      steps {
-        withCredentials([aws(credentialsId: env.AWS_CRED_ID,
-                            accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-          dir('infra') {
-            sh '''
-              set -e
-              terraform init -input=false
-              terraform apply -auto-approve -input=false
-            '''
-          }
+    
+    stage('OpenTofu Apply') {
+        steps {
+            withCredentials([aws(credentialsId: env.AWS_CRED_ID, accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                dir('infra') {
+                    sh '''
+                    set -e
+                    tofu init -input=false
+                    tofu apply -auto-approve -input=false
+                    '''
+                }
+            }
         }
-      }
     }
+    
 
     stage('Build & Run on App Server') {
       steps {
