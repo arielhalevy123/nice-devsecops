@@ -26,20 +26,63 @@ pipeline {
         '''
       }
     }
-    
-    stage('OpenTofu Apply') {
-        steps {
-            withCredentials([aws(credentialsId: env.AWS_CRED_ID, accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                dir('infra') {
-                    sh '''
-                    set -e
-                    tofu init -input=false
-                    tofu apply -auto-approve -input=false
-                    '''
-                }
-            }
-        }
+
+    stage('Prepare OpenTofu (inside Jenkins)') {
+  environment { TOFU_VERSION = '1.8.2' }
+  steps {
+    dir('infra') {
+      sh '''
+        set -e
+        mkdir -p .tools && cd .tools
+
+        # אם כבר הורדנו – דלג
+        if [ -x tofu/bin/tofu ]; then
+          echo "tofu already present: $(tofu/bin/tofu version | head -1)"
+          exit 0
+        fi
+
+        echo "Downloading OpenTofu ${TOFU_VERSION}…"
+        curl -fsSL \
+          https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}/tofu_${TOFU_VERSION}_linux_amd64.zip \
+          -o tofu.zip
+
+        # פותחים ZIP עם jar (קיים ב-Jenkins image)
+        rm -rf tofu && mkdir -p tofu
+        (cd tofu && jar xvf ../tofu.zip >/dev/null)
+
+        # לוודא ריצה
+        chmod +x tofu/bin/tofu
+        ./tofu/bin/tofu version
+      '''
     }
+  }
+}
+
+ stage('OpenTofu Apply') {
+  steps {
+    withCredentials([aws(credentialsId: env.AWS_CRED_ID,
+                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+      dir('infra') {
+        // מוסיפים את הבינארי שהורדנו ל-PATH רק בשלב הזה
+        withEnv(["PATH=${env.WORKSPACE}/infra/.tools/tofu/bin:${env.PATH}",
+                 "AWS_DEFAULT_REGION=${env.AWS_REGION}"]) {
+          sh '''
+            set -e
+            echo "Using tofu at: $(command -v tofu)"
+            tofu version
+
+            # אם הגדרת backend "s3" ב-terraform {} – זה ישתמש ב-AWS env vars מפה
+            tofu init -input=false
+
+            tofu plan -out=tfplan
+            tofu apply -auto-approve tfplan
+          '''
+        }
+      }
+    }
+  }
+}
     
 
     stage('Build & Run on App Server') {
