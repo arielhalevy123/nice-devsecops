@@ -27,58 +27,41 @@ pipeline {
       }
     }
 
-    stage('Prepare OpenTofu (inside Jenkins)') {
-  environment { TOFU_VERSION = '1.8.2' }
+stage('OpenTofu Apply (on App Server via Docker)') {
   steps {
-    dir('infra') {
-      sh '''
-        set -e
-        mkdir -p .tools && cd .tools
+    sshagent (credentials: [env.SSH_CRED_ID]) {
+      withCredentials([aws(credentialsId: env.AWS_CRED_ID,
+                           accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                           secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        sh '''
+          set -e
+          ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
+            set -e &&
+            # להביא/לעדכן את הקוד
+            if [ -d ~/nice-devsecops ]; then
+              cd ~/nice-devsecops && git pull origin main
+            else
+              git clone $REPO_URL ~/nice-devsecops
+            fi &&
 
-        # אם כבר הורדנו – דלג
-        if [ -x tofu/bin/tofu ]; then
-          echo "tofu already present: $(tofu/bin/tofu version | head -1)"
-          exit 0
-        fi
+            cd ~/nice-devsecops/infra &&
 
-        echo "Downloading OpenTofu ${TOFU_VERSION}…"
-        curl -fsSL \
-          https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}/tofu_${TOFU_VERSION}_linux_amd64.zip \
-          -o tofu.zip
+            # init + apply בעזרת קונטיינר opentofu (state מקומי על ה-EC2)
+            docker run --rm \
+              -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+              -e AWS_DEFAULT_REGION=$AWS_REGION \
+              -v \\$(pwd):/work -w /work \
+              ghcr.io/opentofu/opentofu:1.8.8 init -input=false &&
 
-        # פותחים ZIP עם jar (קיים ב-Jenkins image)
-        rm -rf tofu && mkdir -p tofu
-        (cd tofu && jar xvf ../tofu.zip >/dev/null)
-
-        # לוודא ריצה
-        chmod +x tofu/bin/tofu
-        ./tofu/bin/tofu version
-      '''
-    }
-  }
-}
-
- stage('OpenTofu Apply') {
-  steps {
-    withCredentials([aws(credentialsId: env.AWS_CRED_ID,
-                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-      dir('infra') {
-        // מוסיפים את הבינארי שהורדנו ל-PATH רק בשלב הזה
-        withEnv(["PATH=${env.WORKSPACE}/infra/.tools/tofu/bin:${env.PATH}",
-                 "AWS_DEFAULT_REGION=${env.AWS_REGION}"]) {
-          sh '''
-            set -e
-            echo "Using tofu at: $(command -v tofu)"
-            tofu version
-
-            # אם הגדרת backend "s3" ב-terraform {} – זה ישתמש ב-AWS env vars מפה
-            tofu init -input=false
-
-            tofu plan -out=tfplan
-            tofu apply -auto-approve tfplan
-          '''
-        }
+            docker run --rm \
+              -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+              -e AWS_DEFAULT_REGION=$AWS_REGION \
+              -v \\$(pwd):/work -w /work \
+              ghcr.io/opentofu/opentofu:1.8.8 apply -auto-approve
+          "
+        '''
       }
     }
   }
