@@ -185,6 +185,10 @@ def generate_link():
     
     link = build_miluimnik_link(service_dates, service_before, user_flags)
     return jsonify({'link': link, 'counter': link_counter})
+@app.after_request
+def add_csp_header(response):
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self';"
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
