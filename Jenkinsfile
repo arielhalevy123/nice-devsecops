@@ -26,18 +26,6 @@ pipeline {
         '''
       }
     }
-  stage('Clean Docker') {
-  steps {
-    sshagent (credentials: [env.SSH_CRED_ID]) {
-      sh """
-        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST '
-          echo "🧹 Cleaning up unused Docker resources..."
-          docker system prune -f --volumes
-        '
-      """
-    }
-  }
-}
 
 stage('OpenTofu Apply (on App Server via Docker)') {
   steps {
@@ -150,21 +138,43 @@ stage('OpenTofu Apply (on App Server via Docker)') {
 stage('OWASP ZAP Scan') {
   steps {
     sshagent (credentials: [env.SSH_CRED_ID]) {
-      sh '''
-        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
-          set -e
+      withCredentials([aws(credentialsId: env.AWS_CRED_ID,
+                           accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                           secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        sh '''
+          ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
+            set -e
 
-          echo 'Running OWASP ZAP scan...'
-          docker run --rm \
-            -v ~/nice-devsecops/app:/zap/wrk/:rw \
-            zaproxy/zap-stable zap-baseline.py \
-            -t http://34.207.115.202/ \
-            -r zap-report.html || true
+            echo 'Running OWASP ZAP scan...'
+            docker run --rm \
+              -v ~/nice-devsecops/app:/zap/wrk/:rw \
+              zaproxy/zap-stable zap-baseline.py \
+              -t http://34.207.115.202/ \
+              -r zap-report.html || true
 
-          echo 'Uploading report to S3...'
-          aws s3 cp zap-report.html s3://$BUCKET_NAME/zap-report.html
-        "
-      '''
+            echo 'Uploading report to S3...'
+            docker run --rm \
+              -v ~/nice-devsecops/app:/work \
+              -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+              -e AWS_DEFAULT_REGION=$AWS_REGION \
+              amazon/aws-cli \
+              s3 cp /work/zap-report.html s3://$BUCKET/reports/zap-$(date +%s).html --region $AWS_REGION
+          "
+        '''
+      }
+    }
+  }
+}
+  stage('Clean Docker') {
+  steps {
+    sshagent (credentials: [env.SSH_CRED_ID]) {
+      sh """
+        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST '
+          echo "🧹 Cleaning up unused Docker resources..."
+          docker system prune -f --volumes
+        '
+      """
     }
   }
 }
