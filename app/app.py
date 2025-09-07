@@ -9,7 +9,7 @@ import pypdfium2 as pdfium
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_from_directory
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='frontend', static_url_path='') 
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -187,7 +187,8 @@ def generate_link():
     return jsonify({'link': link, 'counter': link_counter})
 @app.after_request
 def add_csp_header(response):
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self';"
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none';"
+    response.headers['X-Frame-Options'] = 'DENY'
     return response
 
 if __name__ == '__main__':
