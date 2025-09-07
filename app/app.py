@@ -114,7 +114,7 @@ def extract_service_dates_from_pdf(path):
 def build_miluimnik_link(date_ranges, service_before, user_flags):
     formatted_ranges = []
     # שומר על הלוגיקה המקורית (גם אם הסדר נראה הפוך בקוד המקורי)
-    for end, start in date_ranges:
+    for start, end in date_ranges:
         formatted_ranges.append({
             "startDate": start,
             "endDate": end,
@@ -186,8 +186,20 @@ def generate_link():
     link = build_miluimnik_link(service_dates, service_before, user_flags)
     return jsonify({'link': link, 'counter': link_counter})
 @app.after_request
+@app.after_request
 def add_csp_header(response):
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none';"
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self'; "
+        "img-src 'self' data:; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none';"
+    )
     response.headers['X-Frame-Options'] = 'DENY'
     return response
 
