@@ -51,6 +51,3 @@ resource "aws_iam_user_policy_attachment" "attach_policy" {
   policy_arn = aws_iam_policy.s3_upload_policy.arn
 }
 
-resource "aws_iam_access_key" "jenkins_key" {
-  user = aws_iam_user.jenkins_user.name
-}
