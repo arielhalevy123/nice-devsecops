@@ -4,112 +4,7 @@
   <meta charset="UTF-8">
   <title>מחשבון זכאות מילואים</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f6f6f6;
-      padding: 20px;
-    }
-
-    .container {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      max-width: 500px;
-      margin: auto;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    h2 {
-      margin-bottom: 15px;
-      color: #2d4d8c;
-    }
-
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-
-    input[type="file"],
-    input[type="number"],
-    button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-
-    .checkbox-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
-      }
-
-    .checkbox-group label {
-      background: #e6e6e6;
-      color: black;
-      border-radius: 20px;
-      padding: 8px 15px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: all 0.2s ease-in-out;
-    }
-
-    .checkbox-group input[type="checkbox"] {
-      display: none;
-    }
-
-    .checkbox-group input[type="checkbox"]:checked + label {
-        background-color: #2d4d8c;
-        color: white;
-        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-    }
-
-    .checkbox-group span {
-      display: inline-block;
-      transition: all 0.2s ease-in-out;
-    }
-
-    button {
-      background: #2d4d8c;
-      color: white;
-      font-size: 16px;
-      margin-top: 20px;
-      cursor: pointer;
-    }
-
-    #result {
-      margin-top: 20px;
-      text-align: center;
-    }
-
-    #result a {
-      display: inline-block;
-      background: green;
-      color: white;
-      padding: 10px 20px;
-      text-decoration: none;
-      border-radius: 8px;
-      font-weight: bold;
-    }
-
-    @media (max-width: 600px) {
-      .checkbox-group {
-        flex-direction: column;
-      }
-    }
-    footer {
-      text-align: center;
-      margin-top: 40px;
-      padding-top: 10px;
-      font-size: 14px;
-      color: #555;
-      border-top: 1px solid #ccc;
-    }
-  </style>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <div class="container">
@@ -133,7 +28,6 @@
         <input type="checkbox" id="isIndependent" name="isIndependent" value="true">  <label for="isIndependent">עצמאי/ת</label>
       </div>
 
-
       <button type="submit">צור קישור לאתר miluimnik</button>
     </form>
 
@@ -148,33 +42,6 @@
     Open to development positions
   </footer>
 
-
-  <script>
-    const form = document.getElementById('form');
-    const result = document.getElementById('result');
-
-    form.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      result.innerHTML = 'שולח...';
-
-      const formData = new FormData(form);
-      const response = await fetch('/generate-link', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-      if (data.link) {
-         result.innerHTML = `<a href="${data.link}" target="_blank">מעבר לאתר miluimnik</a>`;
-         document.getElementById('counter').innerText = ` מספר הקישורים שנוצרו עד כה: ${data.counter}`;    
-         } else if (data.error) {
-                 result.innerHTML = `<p style="color:red;">שגיאה: ${data.error}</p>`;
-                 } else {
-                    result.innerHTML = `<p style="color:red;">שגיאה כללית: לא התקבל קישור</p>`;
-                    }
-
-     
-    });
-  </script>
+  <script src="js/script.js"></script>
 </body>
 </html>

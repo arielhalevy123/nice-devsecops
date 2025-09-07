@@ -173,6 +173,7 @@ stage('OWASP ZAP Scan') {
         ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST '
           echo "🧹 Cleaning up unused Docker resources..."
           docker system prune -f --volumes
+          docker image prune -a -f
         '
       """
     }
