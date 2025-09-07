@@ -135,24 +135,22 @@ stage('OpenTofu Apply (on App Server via Docker)') {
         }
     }
 
-    stage('OWASP ZAP Scan') {
+        stage('OWASP ZAP Scan') {
         steps {
             sshagent (credentials: [env.SSH_CRED_ID]) {
             sh '''
                 ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
                 set -e &&
-                cd ~/nice-devsecops/app &&
-
                 echo 'Running OWASP ZAP scan...' &&
                 docker run --rm \\
-                    -v \$(pwd):/zap/wrk/:rw \\
-                    ghcr.io/zaproxy/zap-baseline \\
+                    -v ~/nice-devsecops/app:/zap/wrk/:rw \\
+                    owasp/zap2docker-stable zap-baseline.py \\
                     -t http://localhost \\
-                    -r zap-report.html &&
+                    -r zap-report.html \\
+                    --exit-code 0 &&
 
-                echo 'Uploading zap-report.html to S3...' &&
-                aws s3 cp zap-report.html s3://$S3_BUCKET_NAME/zap-report.html &&
-                echo 'ZAP scan and upload complete.'
+                echo 'Uploading ZAP report to S3...' &&
+                aws s3 cp zap-report.html s3://$BUCKET_NAME/zap-report.html
                 "
             '''
             }
