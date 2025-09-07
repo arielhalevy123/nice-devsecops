@@ -201,9 +201,10 @@ def add_csp_header(response):
         "frame-ancestors 'none'; "
         "media-src 'self'; "
         "manifest-src 'self'; "
-        "require-trusted-types-for 'script';"
+        "require-trusted-types-for 'script'"
     )
     response.headers['X-Frame-Options'] = 'DENY'
     return response
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

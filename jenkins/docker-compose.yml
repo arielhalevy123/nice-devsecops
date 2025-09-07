@@ -1,6 +1,15 @@
 version: '3.8'
 
 services:
+  flask-app:
+    build: .
+    container_name: miluim-grant
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./app:/app
+    restart: always
+
   jenkins:
     image: jenkins/jenkins:lts
     container_name: jenkins-devsecops
@@ -11,5 +20,19 @@ services:
       - jenkins_home:/var/jenkins_home
     restart: always
 
+  caddy:
+    image: caddy:2
+    container_name: caddy-server
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: always
+
 volumes:
   jenkins_home:
+  caddy_data:
+  caddy_config:
