@@ -146,7 +146,7 @@ stage('OpenTofu Apply (on App Server via Docker)') {
                 echo 'Running OWASP ZAP scan...' &&
                 docker run --rm \\
                     -v \$(pwd):/zap/wrk/:rw \\
-                    owasp/zap2docker-stable zap-baseline.py \\
+                    ghcr.io/zaproxy/zap-baseline \\
                     -t http://localhost \\
                     -r zap-report.html &&
 
