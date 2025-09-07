@@ -185,7 +185,7 @@ def generate_link():
     
     link = build_miluimnik_link(service_dates, service_before, user_flags)
     return jsonify({'link': link, 'counter': link_counter})
-@app.after_request
+
 @app.after_request
 def add_csp_header(response):
     response.headers['Content-Security-Policy'] = (
