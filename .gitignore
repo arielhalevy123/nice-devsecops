@@ -8,9 +8,7 @@ __pycache__/
 *.sqlite3
 *.DS_Store
 venv/
-.env
-.env.*
-*.env
+
 
 # ---------- App runtime data ----------
 app/uploads/
