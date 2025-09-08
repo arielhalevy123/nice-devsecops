@@ -10,6 +10,16 @@ pipeline {
   }
 
   stages {
+        stage('Checkout') {
+      steps {
+        git url: REPO_URL, branch: 'main'
+        sh '''
+          set -e
+          echo "Repo checked out. Current files:"
+          ls -la
+        '''
+      }
+    }
         stage('Load .env') {
       steps {
         script {
@@ -28,16 +38,7 @@ pipeline {
       }
     }
 
-    stage('Checkout') {
-      steps {
-        git url: REPO_URL, branch: 'main'
-        sh '''
-          set -e
-          echo "Repo checked out. Current files:"
-          ls -la
-        '''
-      }
-    }
+
 
 stage('OpenTofu Apply (on App Server via Docker)') {
   steps {
