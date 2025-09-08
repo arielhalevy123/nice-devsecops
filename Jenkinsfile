@@ -5,12 +5,18 @@ pipeline {
 
   environment {
     REPO_URL    = 'https://github.com/arielhalevy123/nice-devsecops.git'
-   SSH_CRED_ID = credentials('ssh-ec2-app')
-   AWS_CRED_ID = credentials('aws-jenkins-devsecops')
+    REMOTE_HOST = '34.207.115.202'
+    REMOTE_USER = 'ubuntu'
+    SSH_CRED_ID = 'ssh-ec2-app'
+    IMAGE_NAME  = 'miluim-grant:latest'
+
+    AWS_CRED_ID = 'aws-jenkins-devsecops'
+    BUCKET      = 'devsecops-scan-reports-ariel'
+    AWS_REGION  = 'us-east-1'
   }
 
   stages {
-        stage('Checkout') {
+    stage('Checkout') {
       steps {
         git url: REPO_URL, branch: 'main'
         sh '''
@@ -20,25 +26,6 @@ pipeline {
         '''
       }
     }
-        stage('Load .env') {
-      steps {
-        script {
-          def envVars = readProperties file: '.env'
-          envVars.each { key, value ->
-            env."${key}" = value
-          }
-        }
-      }
-    }
-
-    stage('Print Vars') {
-      steps {
-        echo "Remote host: ${env.REMOTE_HOST}"
-        echo "Image: ${env.IMAGE_NAME}"
-      }
-    }
-
-
 
 stage('OpenTofu Apply (on App Server via Docker)') {
   steps {
