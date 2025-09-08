@@ -149,7 +149,7 @@ stage('OWASP ZAP Scan') {
             docker run --rm \
               -v ~/nice-devsecops/app:/zap/wrk/:rw \
               zaproxy/zap-stable zap-baseline.py \
-              -t http://34.207.115.202/ \
+              -t http://nice-devsecops.duckdns.org/ \
               -r zap-report.html || true
 
             echo 'Uploading report to S3...'
