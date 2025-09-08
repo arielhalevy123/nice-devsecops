@@ -1,3 +1,0 @@
-nice-devsecops.duckdns.org {
-    reverse_proxy flask-app:5000
-}
